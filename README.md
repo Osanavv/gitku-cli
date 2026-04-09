@@ -17,7 +17,7 @@ gitku kirim
 ## Install
 
 ```bash
-npm install -g gitku
+npm install -g @ossnv/gitku
 ```
 
 Atau clone manual:
