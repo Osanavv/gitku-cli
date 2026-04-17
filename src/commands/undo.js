@@ -1,28 +1,5 @@
-const { spawnSync } = require('child_process');
 const readline = require('readline');
-
-function git(...args) {
-  const result = spawnSync('git', args.flat(), { stdio: ['inherit', 'pipe', 'pipe'] });
-  const stdout = result.stdout ? result.stdout.toString() : '';
-  const stderr = result.stderr ? result.stderr.toString() : '';
-
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-
-  if (result.status !== 0) {
-    const err = new Error();
-    err.stderr = stderr + stdout;
-    throw err;
-  }
-
-  return stdout;
-}
-
-function gitOut(...args) {
-  const result = spawnSync('git', args.flat());
-  if (result.status !== 0) throw new Error(result.stderr.toString());
-  return result.stdout.toString().trim();
-}
+const { git, gitOut } = require('../utils/git');
 
 function tanya(pertanyaan) {
   return new Promise(resolve => {

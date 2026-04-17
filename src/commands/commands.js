@@ -1,28 +1,5 @@
-const { spawnSync } = require('child_process');
 const readline = require('readline');
-
-function git(...args) {
-  const result = spawnSync('git', args.flat(), { stdio: ['inherit', 'pipe', 'pipe'] });
-  const stdout = result.stdout ? result.stdout.toString() : '';
-  const stderr = result.stderr ? result.stderr.toString() : '';
-
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-
-  if (result.status !== 0) {
-    const err = new Error();
-    err.stderr = stderr + stdout;
-    throw err;
-  }
-
-  return stdout;
-}
-
-function gitOut(...args) {
-  const result = spawnSync('git', args.flat());
-  if (result.status !== 0) throw new Error(result.stderr.toString());
-  return result.stdout.toString().trim();
-}
+const { git, gitOut, currentBranch, remoteExists, validateBranchName, hasStagedFiles } = require('../utils/git');
 
 function tanya(pertanyaan) {
   return new Promise(resolve => {
@@ -34,14 +11,6 @@ function tanya(pertanyaan) {
 async function tanyaYN(pertanyaan) {
   const jawab = await tanya(`${pertanyaan} (y/n): `);
   return jawab.toLowerCase() === 'y';
-}
-
-function branchAktif() {
-  try { return gitOut('branch', '--show-current') || 'main'; } catch (_) { return 'main'; }
-}
-
-function remoteAda(nama) {
-  return spawnSync('git', ['remote']).stdout.toString().trim().split('\n').includes(nama);
 }
 
 const run = {
@@ -89,16 +58,19 @@ const run = {
 
   // git commit
   async simpan([pesan]) {
+    // Cek apakah ada file yang sudah di-stage sebelum commit
+    if (!hasStagedFiles()) {
+      console.log('\n⚠️  Tidak ada file yang ditandai untuk disimpan.');
+      console.log('   Tandai dulu file-nya: gitku tandai semua\n');
+      return;
+    }
+
     if (!pesan) {
       pesan = await tanya('💬 Pesan simpanan kamu: ');
       if (!pesan) { console.error('❌ Pesan tidak boleh kosong.\n'); return; }
     }
     console.log('\n💾 Menyimpan perubahan...\n');
-    const out = git('commit', '-m', pesan);
-    if (/nothing to commit|nothing added/i.test(out)) {
-      console.log('\n⚠️  Tidak ada yang perlu disimpan. Semua sudah up to date!\n');
-      return;
-    }
+    git('commit', '-m', pesan);
     console.log('\n✅ Tersimpan!');
     console.log('   Mau kirim ke GitHub? Ketik: gitku kirim\n');
   },
@@ -109,7 +81,7 @@ const run = {
 
     const paksa = args.includes('--paksa');
     const remote = args.includes('--remote') ? args[args.indexOf('--remote') + 1] : 'origin';
-    let branch = branchAktif();
+    let branch = currentBranch();
 
     if (branch === 'master') {
       const mauMain = await tanyaYN('⚠️  Branch kamu "master". Mau diganti ke "main"?');
@@ -120,7 +92,7 @@ const run = {
       }
     }
 
-    if (!remoteAda(remote)) {
+    if (!remoteExists(remote)) {
       console.log(`⚠️  Remote "${remote}" belum diatur.`);
       const url = await tanya('🔗 Masukkan URL repo GitHub kamu: ');
       if (!url) { console.error('❌ URL tidak boleh kosong.\n'); return; }
@@ -149,12 +121,23 @@ const run = {
   // git branch
   async cabang([sub, nama]) {
     if (sub === 'baru') {
-      if (!nama) { console.error('\n❌ Kasih nama cabangnya.\n   Contoh: gitku cabang baru fitur-login\n'); return; }
+      if (!nama) {
+        console.error('\n❌ Kasih nama cabangnya.\n   Contoh: gitku cabang baru fitur-login\n');
+        return;
+      }
+      const errMsg = validateBranchName(nama);
+      if (errMsg) {
+        console.error(`\n❌ Nama branch tidak valid: ${errMsg}\n`);
+        return;
+      }
       console.log(`\n🌿 Membuat cabang "${nama}"...\n`);
       git('checkout', '-b', nama);
       console.log(`\n✅ Cabang "${nama}" dibuat!\n`);
     } else if (sub === 'hapus') {
-      if (!nama) { console.error('\n❌ Kasih nama cabang yang mau dihapus.\n   Contoh: gitku cabang hapus fitur-login\n'); return; }
+      if (!nama) {
+        console.error('\n❌ Kasih nama cabang yang mau dihapus.\n   Contoh: gitku cabang hapus fitur-login\n');
+        return;
+      }
       const yakin = await tanyaYN(`⚠️  Yakin mau hapus cabang "${nama}"?`);
       if (!yakin) { console.log('Dibatalkan.\n'); return; }
       git('branch', '-d', nama);
@@ -168,7 +151,10 @@ const run = {
 
   // git checkout
   async pindah([nama]) {
-    if (!nama) { console.error('\n❌ Kasih nama cabang tujuannya.\n   Contoh: gitku pindah main\n'); return; }
+    if (!nama) {
+      console.error('\n❌ Kasih nama cabang tujuannya.\n   Contoh: gitku pindah main\n');
+      return;
+    }
     console.log(`\n🔀 Pindah ke "${nama}"...\n`);
     git('checkout', nama);
     console.log(`\n✅ Sekarang di cabang "${nama}"!\n`);
@@ -176,7 +162,10 @@ const run = {
 
   // git merge
   async gabung([nama]) {
-    if (!nama) { console.error('\n❌ Kasih nama cabang yang mau digabung.\n   Contoh: gitku gabung fitur-login\n'); return; }
+    if (!nama) {
+      console.error('\n❌ Kasih nama cabang yang mau digabung.\n   Contoh: gitku gabung fitur-login\n');
+      return;
+    }
     console.log(`\n🔀 Menggabung cabang "${nama}"...\n`);
     git('merge', nama);
     console.log(`\n✅ Cabang "${nama}" berhasil digabung!\n`);
@@ -200,7 +189,10 @@ const run = {
   // git remote
   async remote([sub, url]) {
     if (sub === 'ganti') {
-      if (!url) { console.error('\n❌ Kasih URL barunya.\n   Contoh: gitku remote ganti https://github.com/user/repo\n'); return; }
+      if (!url) {
+        console.error('\n❌ Kasih URL barunya.\n   Contoh: gitku remote ganti https://github.com/user/repo\n');
+        return;
+      }
       git('remote', 'set-url', 'origin', url);
       console.log(`\n✅ Remote origin diganti ke:\n   ${url}\n`);
     } else {
@@ -210,6 +202,7 @@ const run = {
     }
   },
 
+  // git stash
   async 'simpan-sementara'() {
     console.log('\n🗂  Menyembunyikan perubahan...\n');
     git('stash');

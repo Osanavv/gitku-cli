@@ -1,28 +1,6 @@
-const { spawnSync } = require('child_process');
+const { git, gitOut } = require('../utils/git');
+
 const { colorize } = require('../utils/colors');
-
-function git(...args) {
-  const result = spawnSync('git', args.flat(), { stdio: ['inherit', 'pipe', 'pipe'] });
-  const stdout = result.stdout ? result.stdout.toString() : '';
-  const stderr = result.stderr ? result.stderr.toString() : '';
-
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-
-  if (result.status !== 0) {
-    const err = new Error();
-    err.stderr = stderr + stdout;
-    throw err;
-  }
-
-  return stdout;
-}
-
-function gitOut(...args) {
-  const result = spawnSync('git', args.flat());
-  if (result.status !== 0) throw new Error(result.stderr.toString());
-  return result.stdout.toString().trim();
-}
 
 async function beda(args) {
   const siap = args.includes('--siap');
@@ -81,12 +59,12 @@ async function info() {
     console.log(`   ${colorize('Total Commit', 'cyan')}    : ${colorize(totalCommits, 'bold')}`);
     console.log(`   ${colorize('Total Cabang', 'cyan')}    : ${colorize(branches.length, 'bold')}`);
     console.log(`   ${colorize('Total File', 'cyan')}      : ${colorize(totalFiles, 'bold')}`);
-    console.log(`   ${colorize('Ukuran Repo', 'cyan')}    : ${totalSize} objects`);
+    console.log(`   ${colorize('Ukuran Repo', 'cyan')}     : ${totalSize} objects`);
     console.log(`   ${colorize('Branch Aktif', 'cyan')}    : ${colorize(currentBranch, 'green')}`);
-    console.log(`   ${colorize('Remote', 'cyan')}         : ${remote !== 'Tidak ada' ? remote : colorize('Tidak ada', 'dim')}`);
+    console.log(`   ${colorize('Remote', 'cyan')}          : ${remote !== 'Tidak ada' ? remote : colorize('Tidak ada', 'dim')}`);
     console.log('');
     console.log(`   ${colorize('Commit Terakhir', 'cyan')} : ${lastCommit} oleh ${lastAuthor}`);
-    console.log(`   ${colorize('Kontributor', 'cyan')}    : ${contributors} orang`);
+    console.log(`   ${colorize('Kontributor', 'cyan')}     : ${contributors} orang`);
     console.log('');
 
   } catch (err) {
