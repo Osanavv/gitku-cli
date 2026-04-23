@@ -14,7 +14,7 @@ gitku kirim
 
 ---
 
-## Install
+## Cara Install
 
 ```bash
 npm install -g @ossnv/gitku
