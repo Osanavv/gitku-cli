@@ -219,15 +219,8 @@ gitku info
    Commit Terakhir : 2 jam lalu oleh Osanavv
    Kontributor     : 3 orang
 ```
+ ---
  
----
-
-## Kontribusi
- 
-Mau ikut kontribusi? Baca [CONTRIBUTING.md](./CONTRIBUTING.md) dulu ya.
-
----
-
 ## Lisensi
 
 MIT
