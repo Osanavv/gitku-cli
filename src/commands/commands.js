@@ -134,14 +134,51 @@ const run = {
       git('checkout', '-b', nama);
       console.log(`\n✅ Cabang "${nama}" dibuat!\n`);
     } else if (sub === 'hapus') {
-      if (!nama) {
-        console.error('\n❌ Kasih nama cabang yang mau dihapus.\n   Contoh: gitku cabang hapus fitur-login\n');
+      if (nama) {
+        const yakin = await tanyaYN(`⚠️  Yakin mau hapus cabang "${nama}"?`);
+        if (!yakin) { console.log('Dibatalkan.\n'); return; }
+        git('branch', '-d', nama);
+        console.log(`\n✅ Cabang "${nama}" dihapus!\n`);
         return;
       }
-      const yakin = await tanyaYN(`⚠️  Yakin mau hapus cabang "${nama}"?`);
-      if (!yakin) { console.log('Dibatalkan.\n'); return; }
-      git('branch', '-d', nama);
-      console.log(`\n✅ Cabang "${nama}" dihapus!\n`);
+
+      // tanpa args
+      const { spawnSync } = require('child_process');
+      const branchAktif = spawnSync('git', ['branch', '--show-current']).stdout.toString().trim() || 'main';
+      const dilindungi = ['main', 'master', 'develop', 'dev', branchAktif];
+
+      const hasil = spawnSync('git', ['branch', '--merged']).stdout.toString().trim();
+      const branchMerged = hasil
+        .split('\n')
+        .map(b => b.replace(/^\*?\s+/, '').trim())
+        .filter(b => b && !dilindungi.includes(b));
+
+      if (branchMerged.length === 0) {
+        console.log('\n✅ Tidak ada branch lama yang bisa dihapus. Repo sudah bersih!\n');
+        return;
+      }
+
+      console.log('\n🌿 Branch yang sudah di-merge:\n');
+      branchMerged.forEach((b, i) => {
+        console.log(`   ${String(i + 1).padStart(2)}. ${b}`);
+      });
+      console.log('');
+
+      const jawab = await tanya("Hapus branch mana? (ketik nama atau 'semua'): ");
+      if (!jawab) { console.log('Dibatalkan.\n'); return; }
+
+      const targetList = jawab === 'semua' ? branchMerged : [jawab];
+
+      console.log('');
+      for (const branch of targetList) {
+        if (!branchMerged.includes(branch)) {
+          console.log(`   ⚠️  "${branch}" tidak ada di daftar.\n`);
+          return;
+        }
+        git('branch', '-d', branch);
+        console.log(`   ✅ Dihapus: ${branch}`);
+      }
+      console.log('\n✅ Selesai!\n');
     } else {
       console.log('\n🌿 Daftar cabang:\n');
       git('branch');
