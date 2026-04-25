@@ -1,12 +1,12 @@
 # 🚀 gitku
 
->Kenapa harus ribet kalau bisa simpel? gitku nge-refactor command Git yang sulit dan bikin stress jadi bahasa yang mudah pahami dan sat-set-sat-set super duper ultra max gokil.
+>Wrapper Git berbahasa Indonesia - simpel, ramah pemula.
 
 ```bash
-# Daripada nulis ini 😵
+# Daripada nulis ini 
 git add . && git commit -m "fix bug" && git push origin main
 
-# Cukup tulis ini ✨
+# Cukup tulis ini 
 gitku tandai semua
 gitku simpan "fix bug"
 gitku kirim
