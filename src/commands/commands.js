@@ -58,7 +58,6 @@ const run = {
 
   // git commit
   async simpan([pesan]) {
-    // Cek apakah ada file yang sudah di-stage sebelum commit
     if (!hasStagedFiles()) {
       console.log('\n⚠️  Tidak ada file yang ditandai untuk disimpan.');
       console.log('   Tandai dulu file-nya: gitku tandai semua\n');
@@ -245,8 +244,6 @@ const run = {
     git('stash');
     console.log('✅ Disembunyikan! Kembalikan dengan: gitku ambil-sementara\n');
   },
-
-  // git stash pop
   async 'ambil-sementara'() {
     console.log('\n🗂  Mengembalikan perubahan...\n');
     git('stash', 'pop');
